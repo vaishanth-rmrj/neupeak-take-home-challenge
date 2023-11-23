@@ -27,3 +27,11 @@ unit-test: Write a unit test script using standard Python unittest library
 end_of_row: Boolean parameter that is True if end of row is detected
 
 ### Evaluation Criteria: Method runtime. Lower is better.
+
+## Installation:
+
+1. Python PCL libs (for ubuntu 22.04):
+```
+sudo apt-get update
+sudo apt-get -y install python3-pcl
+```

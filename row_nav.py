@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pcl
 
 class PathOrientationDetector:
     def __init__(self, pointcloud_data_path, skip_factor=20) -> None:
