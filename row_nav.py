@@ -96,22 +96,10 @@ class PathOrientationDetector:
 
         return left_wall_cluster, right_wall_cluster, np.asarray(inlier_cloud.points)
 
-    def determine_heading(self, pcl_data):
-        cov_matrix = np.cov(pcl_data.T)
-        eigenvalues, eigenvectors = np.linalg.eig(cov_matrix)
-
-        # Use the eigenvector corresponding to the highest eigenvalue as the principal axis
-        principal_axis = eigenvectors[:, np.argmax(eigenvalues)]
-
-        # Determine heading 
-        heading_angle = np.arctan2(principal_axis[1], principal_axis[0])
-        return np.degrees(heading_angle)
-
     def get_heading_angle(self, principal_direction):
         """
         get heading angle based on the pricipal
         direction of the corresponding data points
-
         Arguments:
             principal_direction: PCA components
 
@@ -123,7 +111,6 @@ class PathOrientationDetector:
     def compute_principal_direction(self, data_pts):
         """
         to find the principal direction
-
         Arguments:
             data_pts : 2D data points from pcl
         """
@@ -138,8 +125,7 @@ class PathOrientationDetector:
     def compute_heading_angle(self):
         """
         computer heading angle using pcl data of walls
-
-        Args:
+        Arguments:
             pcl_data : Point cloud data of walls
         """
         # convert 3d pcl to 2d data points by removing y-axis
@@ -197,7 +183,6 @@ class PathOrientationDetector:
         """
         check if the path is ending my  measuring 
         left and right wall area
-
         Returns:
             bool: True if path ending
         """
@@ -282,8 +267,8 @@ if __name__ == "__main__":
     detector = PathOrientationDetector()
     pcl_data = load_point_cloud("2.npz")
     detector.set_pcl_from_array(pcl_data)
-    print(detector.compute_heading_angle())    
-    print(detector.check_path_ending()) 
+    print("Robot heading angle: ", detector.compute_heading_angle())    
+    print("Is path ending: ", detector.check_path_ending()) 
 
     
 
