@@ -122,9 +122,9 @@ class PathOrientationDetector:
         principal_direction = eigenvectors[:, sorted_indices[0]]
         return principal_direction
 
-    def compute_heading_angle(self):
+    def compute_heading_angle(self, show_visualization=False):
         """
-        computer heading angle using pcl data of walls
+        compute heading angle using pcl data of walls
         Arguments:
             pcl_data : Point cloud data of walls
         """
@@ -141,7 +141,7 @@ class PathOrientationDetector:
         l_heading_angle = 90.0 - (self.get_heading_angle(l_principal_dir) * -1)
         r_heading_angle = 90.0 - (self.get_heading_angle(r_principal_dir) * -1)
 
-        if DEBUG:
+        if show_visualization:
             plt.scatter(left_data_pts[:, 0], left_data_pts[:, 1])
             plt.quiver(np.mean(left_data_pts[:, 0]), np.mean(left_data_pts[:, 1]), 
                     -l_principal_dir[0], -l_principal_dir[1], 
@@ -161,6 +161,25 @@ class PathOrientationDetector:
         
         self.path_deviation_angle = (l_heading_angle + r_heading_angle)/2.0   
         return self.path_deviation_angle
+    
+    def compute_angular_correction_rate(self, delta_t):
+        """
+        computer angular correction rate (deg/s)
+        Arguments:
+            delta_t : time period
+
+        Returns:
+            ang_rate_deg: rate of angular deviation
+        """
+        # compute heading angle using pcl data of walls
+        heading_angle = self.compute_heading_angle()
+
+        # convert to rads
+        heading_rads = heading_angle * (3.14159 / 180.0)
+        # angular rate
+        ang_rate_rad = heading_rads / delta_t
+        ang_rate_deg = ang_rate_rad * (180.0 / 3.14159)
+        return ang_rate_deg*-1
 
     def compute_bbox_area(self, bbox_pts):
         """
@@ -262,12 +281,11 @@ def load_point_cloud(file_path):
 
 
 if __name__ == "__main__":
-    # pointcloud = plot_row_pointcloud("1.npz")
-
     detector = PathOrientationDetector()
     pcl_data = load_point_cloud("2.npz")
     detector.set_pcl_from_array(pcl_data)
-    print("Robot heading angle: ", detector.compute_heading_angle())    
+    print("Robot heading angle: ", detector.compute_heading_angle())  
+    print("Angualr rate of deviation: ", detector.compute_angular_correction_rate(5))    
     print("Is path ending: ", detector.check_path_ending()) 
 
     
