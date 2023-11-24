@@ -83,8 +83,8 @@ class PathOrientationDetector:
 
         # convert pcl to np array
         wall_pcl = np.asarray(outlier_cloud.points)
-        # wall_indices = np.where(wall_pcl[:, 1] < height_threshold)
-        # wall_pcl = wall_pcl[wall_indices]      
+        wall_indices = np.where(wall_pcl[:, 1] > height_threshold)
+        wall_pcl = wall_pcl[wall_indices]      
 
         # kmeans clustering to separate left and right walls  
         kmeans = KMeans(n_clusters=2)

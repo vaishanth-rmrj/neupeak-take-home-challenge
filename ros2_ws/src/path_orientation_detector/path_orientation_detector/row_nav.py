@@ -63,7 +63,6 @@ class PathOrientationNode(Node):
         """        
         point_cloud_data = pcl_data.copy()
         # invert y axis and move up by 0.1
-        point_cloud_data[:, 1] *= -1
         point_cloud_data[:, 1] += 0.1
         # swap y and z axis
         point_cloud_data[:, [1, 2]] = point_cloud_data[:, [2, 1]]
@@ -118,6 +117,8 @@ def load_point_cloud(file_path):
         """
         row_np_array = np.load(file_path)
         row_pointcloud = row_np_array['arr_0']
+        # invert y axis
+        row_pointcloud[:, 1] *= -1
         return row_pointcloud
 
 def main(args=None):

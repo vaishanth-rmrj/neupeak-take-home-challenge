@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import open3d as o3d
 from sklearn.cluster import KMeans
 
-DEBUG = False
+DEBUG = True
 
 class PathOrientationDetector:
     def __init__(self, 
@@ -83,7 +83,7 @@ class PathOrientationDetector:
 
         # convert pcl to np array
         wall_pcl = np.asarray(outlier_cloud.points)
-        wall_indices = np.where(wall_pcl[:, 1] < height_threshold)
+        wall_indices = np.where(wall_pcl[:, 1] > height_threshold)
         wall_pcl = wall_pcl[wall_indices]      
 
         # kmeans clustering to separate left and right walls  
@@ -130,7 +130,7 @@ class PathOrientationDetector:
         """
         # convert 3d pcl to 2d data points by removing y-axis
         left_data_pts = self.l_wall_pcl[:, [0, 2]].copy()
-        rigth_data_pts = self.r_wall_pcl[:, [0, 2]].copy()
+        rigth_data_pts = self.r_wall_pcl[:, [0, 2]].copy()        
 
         # compute heading direction of each wall
         # PCA to determine principal direction
