@@ -10,7 +10,7 @@ class PathOrientationDetector:
                  distance_threshold=0.01, 
                  height_threshold=-0.1,
                  is_pcl_downsample=False,  
-                 voxel_size=0.01) -> None:
+                 voxel_size=0.02) -> None:
         
         self.pcl_data = np.ndarray([])
         self.l_wall_pcl, self.r_wall_pcl = np.ndarray([]), np.ndarray([])
