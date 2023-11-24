@@ -6,16 +6,29 @@ from .orientation_detector import PathOrientationDetector
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
+from std_msgs.msg import Header
+from sensor_msgs.msg import PointCloud2, PointField
 import pkg_resources
 
 DEBUG = False
+
+FIELDS_XYZ = [
+    PointField(name='x', offset=0, datatype=PointField.FLOAT32, count=1),
+    PointField(name='y', offset=4, datatype=PointField.FLOAT32, count=1),
+    PointField(name='z', offset=8, datatype=PointField.FLOAT32, count=1),
+]
 
 class PathOrientationNode(Node):
     def __init__(self):
         super().__init__('path_orientation_node')
         self.detector = PathOrientationDetector()
         self.publisher_ = self.create_publisher(Twist, '/cmd_vel', 10)
+        self.walls_pcl_pub = self.create_publisher(PointCloud2, '/point_cloud_walls', 10)
+        self.ground_pcl_pub = self.create_publisher(PointCloud2, '/point_cloud_ground', 10)
+
         self.timer = self.create_timer(1.0, self.publish_cmd_vel)
+        self.pcl_pub_timer = self.create_timer(1.0, self.publish_pcl)
+
 
     def publish_cmd_vel(self):
         twist_msg = Twist()
@@ -26,6 +39,57 @@ class PathOrientationNode(Node):
         self.get_logger().info(str(self.detector.compute_heading_angle()))
         self.get_logger().info(str(self.detector.compute_angular_correction_rate(5)))
         self.get_logger().info(str(self.detector.check_path_ending()))
+    
+    def publish_pcl(self):
+        """
+        publish walls and ground pcl data as 
+        ROS2 PoinCloud2 msg type
+        """
+        ground_pcl_msg = self.generate_pointcloud2_msg(self.detector.ground_pcl)
+        walls_pcl_msg = self.generate_pointcloud2_msg(np.vstack((self.detector.l_wall_pcl, self.detector.r_wall_pcl)))
+
+        self.ground_pcl_pub.publish(ground_pcl_msg)
+        self.walls_pcl_pub.publish(walls_pcl_msg)
+
+    
+    def generate_pointcloud2_msg(self, pcl_data):
+        """
+        generate ros2 pointcloud2 msg from pcl data
+        Args:
+            pcl_data: point cloud data
+
+        Returns:
+            pcl_msg: ros2 pointcloud2 msg
+        """        
+        point_cloud_data = pcl_data.copy()
+        # invert y axis and move up by 0.1
+        point_cloud_data[:, 1] *= -1
+        point_cloud_data[:, 1] += 0.1
+        # swap y and z axis
+        point_cloud_data[:, [1, 2]] = point_cloud_data[:, [2, 1]]
+        dtype = np.float32
+        itemsize = np.dtype(dtype).itemsize # 32-bit float takes 4 bytes.
+        # convert from ndarray to bytes
+        data = point_cloud_data.astype(dtype).tobytes()  
+
+        # initialize PointCloud2 msg header
+        header = Header()
+        header.stamp = self.get_clock().now().to_msg()
+        header.frame_id = 'base_link'
+
+        # intialize PointCloud2 msg
+        pcl_msg = PointCloud2()
+        pcl_msg.header = header
+        pcl_msg.height = 1
+        pcl_msg.width = point_cloud_data.shape[0]
+        pcl_msg.is_dense = False
+        pcl_msg.is_bigendian = False
+        pcl_msg.fields = FIELDS_XYZ
+        pcl_msg.row_step = int(itemsize * 3 * point_cloud_data.shape[0])
+        pcl_msg.point_step = int(itemsize * 3) # every point consists of three float32s.
+        pcl_msg.data = data
+        return pcl_msg
+         
 
 def plot_row_pointcloud(file):    
     """
