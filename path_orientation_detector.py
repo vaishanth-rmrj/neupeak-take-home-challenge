@@ -26,10 +26,23 @@ class PathOrientationDetector:
         self.is_path_ending = False
         self.path_deviation_angle = 0  
 
-    def set_pcl_from_array(self, pcl_array):
+    def set_pcl_from_array(self, pcl_array) -> None:
+        """
+        set pcl data from input file array
+        Args:
+            pcl_array (np.ndarray): input point cloud data
+
+        Raises:
+            TypeError: Invalid point cloud type
+            ValueError: Point cloud array wrong dims
+        """
         try:
             if not isinstance(pcl_array, np.ndarray):
-                raise ValueError("Invalid point cloud type")
+                raise TypeError("Invalid point cloud type")     
+            elif pcl_array.ndim != 2:
+                raise ValueError("Point cloud array must be 2D")
+            elif pcl_array.shape[1] != 3:
+                raise ValueError("Points must have 3 dims")
                 
             if self.is_pcl_downsample:
                 # downsample pcl for better performance
@@ -43,64 +56,80 @@ class PathOrientationDetector:
             # segment pcl to walls and ground
             self.l_wall_pcl, self.r_wall_pcl, self.ground_pcl = self.pcl_segmentation_open3d(self.pcl_data, 
                                                                                             self.distance_threshold, 
-                                                                                            self.height_threshold)
-        except ValueError as ve:
-            print(f"Error: {ve}")    
+                                                                                            self.height_threshold)                                
+        except (TypeError, ValueError) as ve:
+            print(f"Error: {ve}")   
+            raise
 
        
-    def pcl_segmentation_open3d(self, pcl_data, distance_threshold=0.01, height_threshold=-0.1):        
+    def pcl_segmentation_open3d(self, pcl_data, distance_threshold=0.01, height_threshold=-0.1, show_vis=False):        
         """
         extract wall and ground segments from pcl
-        Arguments:
+        Args:
             pcl_data: point cloud data fetched from depth maps
+        
+        Raises:
+            TypeError: Invalid point cloud type
+            ValueError: Point cloud array wrong dims
 
         Returns:
             wall_pcl: point cloud data for wall points
             ground_pcl: point cloud data for ground points
         """
-        # initialize open3d point cloud obj
-        pcd = o3d.geometry.PointCloud()
-        # read pcl data
-        pcd.points = o3d.utility.Vector3dVector(pcl_data)
+        try:
+            if not isinstance(pcl_data, np.ndarray):
+                raise TypeError("Invalid point cloud type")            
+            elif pcl_data.ndim != 2:
+                raise ValueError("Point cloud array must be 2D")
+            elif pcl_data.shape[1] != 3:
+                raise ValueError("Points must have 3 dims")
+            
+            # initialize open3d point cloud obj
+            pcd = o3d.geometry.PointCloud()
+            # read pcl data
+            pcd.points = o3d.utility.Vector3dVector(pcl_data)
 
-        # segment pcl to detect ground
-        plane_model, inliers = pcd.segment_plane(distance_threshold=distance_threshold,
-                                                ransac_n=3,
-                                                num_iterations=1000)
+            # segment pcl to detect ground
+            plane_model, inliers = pcd.segment_plane(distance_threshold=distance_threshold,
+                                                    ransac_n=3,
+                                                    num_iterations=1000)
+            
+            # plane model coefficients, for debugging
+            if show_vis:
+                [a, b, c, d] = plane_model
+                print(f"Plane equation: {a:.2f}x + {b:.2f}y + {c:.2f}z + {d:.2f} = 0")
+
+            # segregate ground and wall pcl points
+            inlier_cloud = pcd.select_by_index(inliers)
+            outlier_cloud = pcd.select_by_index(inliers, invert=True)
+
+            # visualize pcl, for debugging
+            if show_vis:
+                o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
+
+            # convert pcl to np array
+            wall_pcl = np.asarray(outlier_cloud.points)
+            wall_indices = np.where(wall_pcl[:, 1] > height_threshold)
+            wall_pcl = wall_pcl[wall_indices]      
+
+            # kmeans clustering to separate left and right walls  
+            kmeans = KMeans(n_clusters=2, n_init='auto')
+            labels = kmeans.fit_predict(wall_pcl)
+
+            # separate pcl into left wall and right wall clusters
+            left_wall_cluster = wall_pcl[labels == 0]
+            right_wall_cluster = wall_pcl[labels == 1]
+            return left_wall_cluster, right_wall_cluster, np.asarray(inlier_cloud.points)
         
-        # plane model coefficients, for debugging
-        if DEBUG:
-            [a, b, c, d] = plane_model
-            print(f"Plane equation: {a:.2f}x + {b:.2f}y + {c:.2f}z + {d:.2f} = 0")
-
-        # segregate ground and wall pcl points
-        inlier_cloud = pcd.select_by_index(inliers)
-        outlier_cloud = pcd.select_by_index(inliers, invert=True)
-
-        # visualize pcl, for debugging
-        if DEBUG:
-            o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
-
-        # convert pcl to np array
-        wall_pcl = np.asarray(outlier_cloud.points)
-        wall_indices = np.where(wall_pcl[:, 1] > height_threshold)
-        wall_pcl = wall_pcl[wall_indices]      
-
-        # kmeans clustering to separate left and right walls  
-        kmeans = KMeans(n_clusters=2)
-        labels = kmeans.fit_predict(wall_pcl)
-
-        # separate pcl into left wall and right wall clusters
-        left_wall_cluster = wall_pcl[labels == 0]
-        right_wall_cluster = wall_pcl[labels == 1]
-
-        return left_wall_cluster, right_wall_cluster, np.asarray(inlier_cloud.points)
+        except (TypeError, ValueError) as ve:
+            print(f"Error: {ve}")  
+            raise
 
     def get_heading_angle(self, principal_direction):
         """
         get heading angle based on the pricipal
         direction of the corresponding data points
-        Arguments:
+        Args:
             principal_direction: PCA components
 
         Returns:
@@ -111,56 +140,81 @@ class PathOrientationDetector:
     def compute_principal_direction(self, data_pts):
         """
         to find the principal direction
-        Arguments:
+        Args:
             data_pts : 2D data points from pcl
+        
+        Raises:
+            TypeError: Invalid point cloud type
+            ValueError: Point cloud array wrong dims
         """
-        # compute covariance matrix and corresponding eigen vals
-        covariance_matrix = np.cov(data_pts, rowvar=False)
-        eigenvalues, eigenvectors = np.linalg.eig(covariance_matrix)
-        # sort eigenvectors based on eigenvalues
-        sorted_indices = np.argsort(eigenvalues)[::-1]
-        principal_direction = eigenvectors[:, sorted_indices[0]]
-        return principal_direction
+        try:
+            if not isinstance(data_pts, np.ndarray):
+                raise TypeError("Invalid point cloud type")            
+            elif data_pts.ndim != 2:
+                raise ValueError("Point cloud array must be 2D")
+            elif data_pts.shape[1] != 2:
+                raise ValueError("Points must have 2 dims")
+            
+            # compute covariance matrix and corresponding eigen vals
+            covariance_matrix = np.cov(data_pts, rowvar=False)
+            eigenvalues, eigenvectors = np.linalg.eig(covariance_matrix)
+            # sort eigenvectors based on eigenvalues
+            sorted_indices = np.argsort(eigenvalues)[::-1]
+            principal_direction = eigenvectors[:, sorted_indices[0]]
+            return principal_direction
+        
+        except (TypeError) as ve:
+            print(f"Error: {ve}")  
 
     def compute_heading_angle(self, show_visualization=False):
         """
         compute heading angle using pcl data of walls
         Arguments:
             pcl_data : Point cloud data of walls
+
+        Raises:
+            ValueError: Point cloud array wrong dims
         """
-        # convert 3d pcl to 2d data points by removing y-axis
-        left_data_pts = self.l_wall_pcl[:, [0, 2]].copy()
-        rigth_data_pts = self.r_wall_pcl[:, [0, 2]].copy()        
+        try: 
+            if self.l_wall_pcl.shape[1] != 2 or self.r_wall_pcl.shape[1] != 2:
+                raise ValueError("Points must have 3 dims")
+            
+            # convert 3d pcl to 2d data points by removing y-axis
+            left_data_pts = self.l_wall_pcl[:, [0, 2]].copy()
+            rigth_data_pts = self.r_wall_pcl[:, [0, 2]].copy()        
 
-        # compute heading direction of each wall
-        # PCA to determine principal direction
-        l_principal_dir = self.compute_principal_direction(left_data_pts)
-        r_principal_dir = self.compute_principal_direction(rigth_data_pts)
-        
-        # computer heading angle using eigen values and vectors
-        l_heading_angle = 90.0 - (self.get_heading_angle(l_principal_dir) * -1)
-        r_heading_angle = 90.0 - (self.get_heading_angle(r_principal_dir) * -1)
+            # compute heading direction of each wall
+            # PCA to determine principal direction
+            l_principal_dir = self.compute_principal_direction(left_data_pts)
+            r_principal_dir = self.compute_principal_direction(rigth_data_pts)
+            
+            # computer heading angle using eigen values and vectors
+            l_heading_angle = 90.0 - (self.get_heading_angle(l_principal_dir) * -1)
+            r_heading_angle = 90.0 - (self.get_heading_angle(r_principal_dir) * -1)
 
-        if show_visualization:
-            plt.scatter(left_data_pts[:, 0], left_data_pts[:, 1])
-            plt.quiver(np.mean(left_data_pts[:, 0]), np.mean(left_data_pts[:, 1]), 
-                    -l_principal_dir[0], -l_principal_dir[1], 
-                    angles='xy', scale_units='xy', scale=0.5, 
-                    color='red', label=f'Heading Angle: {l_heading_angle:.2f} degrees')
+            if show_visualization:
+                plt.scatter(left_data_pts[:, 0], left_data_pts[:, 1])
+                plt.quiver(np.mean(left_data_pts[:, 0]), np.mean(left_data_pts[:, 1]), 
+                        -l_principal_dir[0], -l_principal_dir[1], 
+                        angles='xy', scale_units='xy', scale=0.5, 
+                        color='red', label=f'Heading Angle: {l_heading_angle:.2f} degrees')
 
-            plt.scatter(rigth_data_pts[:, 0], rigth_data_pts[:, 1])
-            plt.quiver(np.mean(rigth_data_pts[:, 0]), np.mean(rigth_data_pts[:, 1]), 
-                    -r_principal_dir[0], -r_principal_dir[1], 
-                    angles='xy', scale_units='xy', scale=0.1, 
-                    color='green', label=f'Heading Angle: {r_heading_angle:.2f} degrees')
-            plt.xlabel('X-axis')
-            plt.ylabel('Y-axis')
-            plt.title('PCA for Vertical Line Direction')
-            plt.legend()
-            plt.show()
-        
-        self.path_deviation_angle = (l_heading_angle + r_heading_angle)/2.0   
-        return self.path_deviation_angle
+                plt.scatter(rigth_data_pts[:, 0], rigth_data_pts[:, 1])
+                plt.quiver(np.mean(rigth_data_pts[:, 0]), np.mean(rigth_data_pts[:, 1]), 
+                        -r_principal_dir[0], -r_principal_dir[1], 
+                        angles='xy', scale_units='xy', scale=0.1, 
+                        color='green', label=f'Heading Angle: {r_heading_angle:.2f} degrees')
+                plt.xlabel('X-axis')
+                plt.ylabel('Y-axis')
+                plt.title('PCA for Vertical Line Direction')
+                plt.legend()
+                plt.show()
+            
+            self.path_deviation_angle = (l_heading_angle + r_heading_angle)/2.0   
+            return self.path_deviation_angle
+        except ValueError as ve:
+            print(f"Error: {ve}")
+            raise
     
     def compute_angular_correction_rate(self, delta_t):
         """
@@ -171,6 +225,11 @@ class PathOrientationDetector:
         Returns:
             ang_rate_deg: rate of angular deviation
         """
+        if delta_t == 0:
+            raise ZeroDivisionError("delta_t cannot be zero")
+        if delta_t < 0:
+            raise ValueError("delta_t cannot be less than zero")
+        
         # compute heading angle using pcl data of walls
         heading_angle = self.compute_heading_angle()
 
@@ -190,6 +249,9 @@ class PathOrientationDetector:
         Returns:
             surface area of 3D bounding box
         """
+        if bbox_pts.shape[1] != 3:
+            raise ValueError("bounding box points must have x, y, z")
+        
         bbox_max_z = np.max(bbox_pts[:, 2])
         bbox_min_z = np.min(bbox_pts[:, 2])
         bbox_max_y = np.max(bbox_pts[:, 1])
@@ -228,6 +290,9 @@ class PathOrientationDetector:
         Arguments:
             pcl_data: point cloud data
         """
+        if pcl_data.shape[1] != 3:
+            raise ValueError("bounding box points must have x, y, z")
+        
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.view_init(azim=0, elev=-180)
@@ -241,6 +306,9 @@ class PathOrientationDetector:
             wall_pcl: point cloud data for wall points
             ground_pcl: point cloud data for ground points        
         """
+        if wall_pcl.shape[1] != 3 or ground_pcl.shape[1] != 3:
+            raise ValueError("bounding box points must have x, y, z")
+        
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
         ax.view_init(azim=0, elev=-180)
