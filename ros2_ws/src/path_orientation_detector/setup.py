@@ -12,6 +12,9 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        # added rviz_config and launch files
+        ('share/' + package_name, ['config/rviz_config.rviz']),
+        ('share/' + package_name, ['launch/row_nav_node.launch.py']),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
