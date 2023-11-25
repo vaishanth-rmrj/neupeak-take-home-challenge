@@ -71,7 +71,7 @@ class PathOrientationNode(Node):
         """
         start_time = time.time() 
         self.path_deviation_angle = self.detector.compute_heading_angle()
-        self.angular_correction_rate = self.detector.compute_angular_correction_rate(5)
+        self.angular_correction_rate = self.detector.compute_angular_correction_rate(5.0)
         self.is_path_ending = self.detector.check_path_ending()
         self.avg_compute_time += (time.time() - start_time)
         self.avg_compute_time /= 2
