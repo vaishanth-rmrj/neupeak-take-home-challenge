@@ -143,10 +143,6 @@ class PathOrientationNode(Node):
 def main(args=None):
     rclpy.init(args=args)
     detector_node = PathOrientationNode()
-    
-    # pcl_data = load_point_cloud(file_path)
-    # detector_node.detector.set_pcl_from_array(pcl_data)
-
     rclpy.spin(detector_node)
     detector_node.destroy_node()
     rclpy.shutdown()
