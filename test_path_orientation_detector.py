@@ -46,7 +46,7 @@ class TestPathOrientationDetector(unittest.TestCase):
         # test if pcl_segmentation_open3d returns the expected wall and ground point clouds
         pcl_data = load_point_cloud('2.npz')
         d_thres, h_thres = 0.01, -0.1 
-        l_wall, r_wall, ground = self.detector.pcl_segmentation_open3d(pcl_data, d_thres, h_thres)
+        l_wall, r_wall, ground = self.detector.pcl_segmentation_open3d(pcl_data, d_thres, h_thres, show_vis=False)
 
         # check if all point clouds are generated
         self.assertIsNotNone(l_wall)
@@ -55,16 +55,16 @@ class TestPathOrientationDetector(unittest.TestCase):
 
         # testing type error
         with self.assertRaises(TypeError):
-           self.detector.pcl_segmentation_open3d(10, d_thres, h_thres) # int input
-           self.detector.pcl_segmentation_open3d(-1, d_thres, h_thres) # neg num input
-           self.detector.pcl_segmentation_open3d("array", d_thres, h_thres) # string input
-           self.detector.pcl_segmentation_open3d([1, 2, 3], d_thres, h_thres) # list input
+           self.detector.pcl_segmentation_open3d(10, d_thres, h_thres, show_vis=False) # int input
+           self.detector.pcl_segmentation_open3d(-1, d_thres, h_thres, show_vis=False) # neg num input
+           self.detector.pcl_segmentation_open3d("array", d_thres, h_thres, show_vis=False) # string input
+           self.detector.pcl_segmentation_open3d([1, 2, 3], d_thres, h_thres, show_vis=False) # list input
 
         # testing value error
         with self.assertRaises(ValueError):
-            self.detector.pcl_segmentation_open3d(np.array([]), d_thres, h_thres) # empty ndarray
-            self.detector.pcl_segmentation_open3d(np.array([1, 2, 3, 4]), d_thres, h_thres)# 1d array
-            self.detector.pcl_segmentation_open3d(np.array([[[1, 2, 3]], [[1, 2, 3]]]), d_thres, h_thres)# 3d array
+            self.detector.pcl_segmentation_open3d(np.array([]), d_thres, h_thres, show_vis=False) # empty ndarray
+            self.detector.pcl_segmentation_open3d(np.array([1, 2, 3, 4]), d_thres, h_thres, show_vis=False)# 1d array
+            self.detector.pcl_segmentation_open3d(np.array([[[1, 2, 3]], [[1, 2, 3]]]), d_thres, h_thres, show_vis=False)# 3d array
     
     def test_get_heading_angle_from_pca_dir(self):
         # test if get_heading_angle_from_pca_dir returns the heading angle in 0-360 deg range

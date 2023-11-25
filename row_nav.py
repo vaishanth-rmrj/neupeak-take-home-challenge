@@ -1,8 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from path_orientation_detector import PathOrientationDetector
-
-DEBUG = False
+import argparse
+import time
 
 def plot_row_pointcloud(file):    
     """
@@ -35,19 +35,21 @@ def load_point_cloud(file_path):
         row_pointcloud[:, 1] *= -1
         return row_pointcloud
 
-import time
+
 if __name__ == "__main__":
-    start_time = time.time() 
+    # args parssing
+    parser = argparse.ArgumentParser()
+    parser.add_argument("input_pcl_file", help="Name of the input pcl file")
+    args = parser.parse_args()
+
+    # initialize
     detector = PathOrientationDetector(is_pcl_downsample=True)    
-    pcl_data = load_point_cloud("4.npz")   
-    detector.set_pcl_from_array(pcl_data)   
+    pcl_data = load_point_cloud(args.input_pcl_file)   
+    detector.set_pcl_from_array(pcl_data)
     
-    print("Robot heading angle: ", detector.compute_heading_angle(show_visualization=True))  
-    print("Angualr rate of deviation: ", detector.compute_angular_correction_rate(5))    
-    print("Is path ending: ", detector.check_path_ending()) 
-    end_time = time.time()
-    elapsed_time = end_time - start_time
-    print(f"Time taken: {elapsed_time:.6f} seconds")
+    print(f"Robot heading angle: {detector.compute_heading_angle(show_visualization=True)} deg")  
+    print(f"Angualr rate of deviation: {detector.compute_angular_correction_rate(5.0)} deg/s")    
+    print(f"Path ending status: {detector.check_path_ending()}") 
     # Time taken: 0.026267 seconds/26.267milliseconds
 
     

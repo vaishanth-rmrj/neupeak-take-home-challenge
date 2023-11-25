@@ -59,7 +59,7 @@ class PathOrientationDetector:
                                                                                         self.height_threshold) 
 
        
-    def pcl_segmentation_open3d(self, pcl_data, distance_threshold=0.01, height_threshold=-0.1, show_vis=False):        
+    def pcl_segmentation_open3d(self, pcl_data, distance_threshold=0.01, height_threshold=-0.1, show_vis=True):        
         """
         extract wall and ground segments from pcl
         Args:
