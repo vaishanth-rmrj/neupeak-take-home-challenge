@@ -28,10 +28,42 @@ end_of_row: Boolean parameter that is True if end of row is detected
 
 ### Evaluation Criteria: Method runtime. Lower is better.
 
-## Installation:
+## Requirments:
 
-1. Python PCL libs (for ubuntu 22.04):
+- ROS2 Humble
+- numpy==1.24.0
+- matplotlib==3.5.1
+- open3d==0.17.0
+- scikit-learn==1.3.2
+
+## Installation:
+1. Install ROS2 Humble
+2. Install requirements.txt
 ```
-sudo apt-get update
-sudo apt-get -y install python3-pcl
+pip install requirements.txt
 ```
+
+## Instructions to run
+1. Without ROS
+```
+python row_nav.py '<input_point_cloud_file>' 
+```
+2. With ROS
+```
+cd ros2_ws/
+colcon build --symlink-install
+source install/setup.bash
+ros2 launch path_orientation_detector row_nav_node.launch.py input_pcl_file:='<point_cloud_file_name>'
+```
+3. To run test script
+```
+python -m unittest test_path_orientation_detector.py 
+```
+
+## How does it work ?
+1. Downsample point cloud for better forformance (<35ms)
+2. Segment the point cloud to left, right walls and ground
+3. Project the point cloud to 2D space thereby getting a top view
+4. Apply PCA on both left and right wall 2D point to get the direction of orientation.
+5. Average the direction angles to get the path deviation angle.
+6. Compute the angular correction rate using this angle.
