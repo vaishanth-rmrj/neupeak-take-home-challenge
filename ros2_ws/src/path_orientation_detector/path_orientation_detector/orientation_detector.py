@@ -27,6 +27,14 @@ class PathOrientationDetector:
         self.path_deviation_angle = 0  
 
     def set_pcl_from_array(self, pcl_array):
+        """
+        assign and segment input pcl data
+        Args:
+            pcl_array (np.ndarray): point cloud data as array
+
+        Raises:
+            ValueError: invalid pcl data received
+        """
         try:
             if not isinstance(pcl_array, np.ndarray):
                 raise ValueError("Invalid point cloud type")
@@ -51,12 +59,12 @@ class PathOrientationDetector:
     def pcl_segmentation_open3d(self, pcl_data, distance_threshold=0.01, height_threshold=-0.1):        
         """
         extract wall and ground segments from pcl
-        Arguments:
-            pcl_data: point cloud data fetched from depth maps
+        Args:
+            pcl_data (np.ndarray): point cloud data fetched from depth maps
 
         Returns:
-            wall_pcl: point cloud data for wall points
-            ground_pcl: point cloud data for ground points
+            wall_pcl (np.ndarray): point cloud data for wall points
+            ground_pcl (np.ndarray): point cloud data for ground points
         """
         # initialize open3d point cloud obj
         pcd = o3d.geometry.PointCloud()
@@ -100,19 +108,22 @@ class PathOrientationDetector:
         """
         get heading angle based on the pricipal
         direction of the corresponding data points
-        Arguments:
-            principal_direction: PCA components
+        Args:
+            principal_direction (float, float): PCA components
 
-        Returns:
-            heading_angle for the data points
+        Return:
+            float: heading_angle for the data points in deg
         """
         return np.degrees(np.arctan2(principal_direction[1], principal_direction[0]))
     
     def compute_principal_direction(self, data_pts):
         """
         to find the principal direction
-        Arguments:
-            data_pts : 2D data points from pcl
+        Args:
+            data_pts (np.ndarray): 2D point cloud data points
+
+        Returns:
+            (float, float): principal heading direction
         """
         # compute covariance matrix and corresponding eigen vals
         covariance_matrix = np.cov(data_pts, rowvar=False)
@@ -125,8 +136,12 @@ class PathOrientationDetector:
     def compute_heading_angle(self, show_visualization=False):
         """
         compute heading angle using pcl data of walls
-        Arguments:
-            pcl_data : Point cloud data of walls
+        Args:
+            show_visualization (bool, optional): to show the direction plot. 
+                Defaults to False.
+
+        Return:
+            (float): path deviation angle in deg
         """
         # convert 3d pcl to 2d data points by removing y-axis
         left_data_pts = self.l_wall_pcl[:, [0, 2]].copy()
@@ -165,11 +180,11 @@ class PathOrientationDetector:
     def compute_angular_correction_rate(self, delta_t):
         """
         computer angular correction rate (deg/s)
-        Arguments:
-            delta_t : time period
+        Args:
+            delta_t (float): time period in secs
 
-        Returns:
-            ang_rate_deg: rate of angular deviation
+        Return:
+            ang_rate_deg (float): rate of angular deviation (deg/s)
         """
         # compute heading angle using pcl data of walls
         heading_angle = self.compute_heading_angle()
@@ -184,11 +199,11 @@ class PathOrientationDetector:
     def compute_bbox_area(self, bbox_pts):
         """
         compute surface area from 3D bounding box
-        Arguments:
-            bbox_pts (x, y, z): 3D points
+        Args:
+            bbox_pts (float x, float y, float z): 3D bounding points
 
-        Returns:
-            surface area of 3D bounding box
+        Return:
+            float: surface area of 3D bounding box
         """
         bbox_max_z = np.max(bbox_pts[:, 2])
         bbox_min_z = np.min(bbox_pts[:, 2])
@@ -226,7 +241,7 @@ class PathOrientationDetector:
         """
         visualize pcl data using matplotlib
         Arguments:
-            pcl_data: point cloud data
+            pcl_data (np.ndarray): point cloud data
         """
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -238,8 +253,8 @@ class PathOrientationDetector:
         """
         visualize pcl segments using matplotlib
         Arguments:
-            wall_pcl: point cloud data for wall points
-            ground_pcl: point cloud data for ground points        
+            wall_pcl (np.ndarray): point cloud data for wall points
+            ground_pcl (np.ndarray): point cloud data for ground points        
         """
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
