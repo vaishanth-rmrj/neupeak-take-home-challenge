@@ -24,7 +24,9 @@ FIELDS_XYZ = [
 class PathOrientationNode(Node):
     def __init__(self):
         super().__init__('path_orientation_node')
-        self.detector = PathOrientationDetector(is_pcl_downsample=True, voxel_size=0.02)
+        # ros params
+        self.declare_parameter('input_pcl_file', '1.npz')    
+
         # publishers
         self.publisher_ = self.create_publisher(Twist, '/cmd_vel', 10)
         self.walls_pcl_pub = self.create_publisher(PointCloud2, '/point_cloud_walls', 10)
@@ -41,6 +43,28 @@ class PathOrientationNode(Node):
         self.angular_correction_rate = 0.0
         self.avg_compute_time = 0.0
 
+        # detector class
+        self.detector = PathOrientationDetector(is_pcl_downsample=True, voxel_size=0.02)      
+        input_pcl_file = self.get_parameter('input_pcl_file').get_parameter_value().string_value
+        self.detector.set_pcl_from_array(self.load_point_cloud(input_pcl_file))
+    
+    def load_point_cloud(self, file_name):
+        """
+        load point cloud from pickle file 
+        Args:
+            file_path (str): path to pickle file
+
+        Return:
+            np.ndarray: point cloud from file downsampled
+        """
+        file_path = pkg_resources.resource_filename('path_orientation_detector', file_name)
+        row_np_array = np.load(file_path)
+        row_pointcloud = row_np_array['arr_0']
+        # invert y axis
+        row_pointcloud[:, 1] *= -1        
+        return row_pointcloud
+
+
     def timer_callback(self):
         """
         execute required methods and publish as ros msgs
@@ -52,10 +76,12 @@ class PathOrientationNode(Node):
         self.avg_compute_time += (time.time() - start_time)
         self.avg_compute_time /= 2
         self.get_logger().info("-"*40)
-        self.get_logger().info("Path deviation angle (deg): "+str(round(self.path_deviation_angle, 3)))
-        self.get_logger().info("Angular correction rate (deg/s): "+str(round(self.angular_correction_rate, 3)))
-        self.get_logger().info("Path ending status: "+str(self.is_path_ending))
-        self.get_logger().info("Average compute time (ms): "+str(round(self.avg_compute_time*1000, 3)))
+        pcl_file_name = self.get_parameter('input_pcl_file').get_parameter_value().string_value
+        self.get_logger().info(f'Input point cloud file: {pcl_file_name}')
+        self.get_logger().info(f"Path deviation angle : {str(round(self.path_deviation_angle, 3))} deg")
+        self.get_logger().info(f"Angular correction rate : {str(round(self.angular_correction_rate, 3))} deg/s")
+        self.get_logger().info(f"Path ending status: {str(self.is_path_ending)}")
+        self.get_logger().info(f"Average compute time : {str(round(self.avg_compute_time*1000, 3))} ms")
 
         # publish data as ros msg
         self.publish_cmd_vel()
@@ -113,27 +139,13 @@ class PathOrientationNode(Node):
         self.robot_heading_arrow_pub.publish(robot_heading_arrow_msg)
         self.path_heading_arrow_pub.publish(path_heading_arrow_msg)         
 
-def load_point_cloud(file_path):
-        """
-        load point cloud from pickle file 
-        Args:
-            file_path (str): path to pickle file
-
-        Return:
-            np.ndarray: point cloud from file downsampled
-        """
-        row_np_array = np.load(file_path)
-        row_pointcloud = row_np_array['arr_0']
-        # invert y axis
-        row_pointcloud[:, 1] *= -1
-        return row_pointcloud
 
 def main(args=None):
     rclpy.init(args=args)
     detector_node = PathOrientationNode()
-    file_path = pkg_resources.resource_filename('path_orientation_detector', '4.npz')
-    pcl_data = load_point_cloud(file_path)
-    detector_node.detector.set_pcl_from_array(pcl_data)
+    
+    # pcl_data = load_point_cloud(file_path)
+    # detector_node.detector.set_pcl_from_array(pcl_data)
 
     rclpy.spin(detector_node)
     detector_node.destroy_node()
