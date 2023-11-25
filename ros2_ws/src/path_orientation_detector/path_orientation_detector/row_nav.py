@@ -1,14 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from .orientation_detector import PathOrientationDetector
+import math
 
 # ros2 imports
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
+import pkg_resources
+# ros msg imports
+from geometry_msgs.msg import Twist, Pose, Point, Quaternion, Vector3
 from std_msgs.msg import Header
 from sensor_msgs.msg import PointCloud2, PointField
-import pkg_resources
+from visualization_msgs.msg import Marker
+
+
 
 DEBUG = False
 
@@ -21,13 +26,17 @@ FIELDS_XYZ = [
 class PathOrientationNode(Node):
     def __init__(self):
         super().__init__('path_orientation_node')
-        self.detector = PathOrientationDetector()
+        self.detector = PathOrientationDetector(is_pcl_downsample=True, voxel_size=0.02)
         self.publisher_ = self.create_publisher(Twist, '/cmd_vel', 10)
         self.walls_pcl_pub = self.create_publisher(PointCloud2, '/point_cloud_walls', 10)
         self.ground_pcl_pub = self.create_publisher(PointCloud2, '/point_cloud_ground', 10)
 
         self.timer = self.create_timer(1.0, self.publish_cmd_vel)
         self.pcl_pub_timer = self.create_timer(1.0, self.publish_pcl)
+
+        self.robot_heading_arrow_pub = self.create_publisher(Marker, '/robot_heading_arrow', 10)
+        self.path_heading_arrow_pub = self.create_publisher(Marker, '/path_heading_arrow', 10)
+        self.create_timer(1.0, self.publish_arrow_marker)
 
 
     def publish_cmd_vel(self):
@@ -55,7 +64,7 @@ class PathOrientationNode(Node):
     def generate_pointcloud2_msg(self, pcl_data):
         """
         generate ros2 pointcloud2 msg from pcl data
-        Args:
+        Arguments:
             pcl_data: point cloud data
 
         Returns:
@@ -88,7 +97,75 @@ class PathOrientationNode(Node):
         pcl_msg.point_step = int(itemsize * 3) # every point consists of three float32s.
         pcl_msg.data = data
         return pcl_msg
-         
+
+    def convert_euler_degrees_to_quaternion(self, yaw_degrees, pitch_degrees, roll_degrees):
+        """
+        convert Euler angles in degrees to quaternion.
+        Arguments:
+            yaw_degrees (float): Yaw angle in degrees.
+            pitch_degrees (float): Pitch angle in degrees.
+            roll_degrees (float): Roll angle in degrees.
+
+        Returns:
+            Quaternion: Quaternion representing the given Euler angles.
+        """
+        # Convert degrees to radians
+        yaw = np.radians(yaw_degrees)
+        pitch = np.radians(pitch_degrees)
+        roll = np.radians(roll_degrees)
+
+        qx = np.sin(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) - np.cos(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+        qy = np.cos(roll/2) * np.sin(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.cos(pitch/2) * np.sin(yaw/2)
+        qz = np.cos(roll/2) * np.cos(pitch/2) * np.sin(yaw/2) - np.sin(roll/2) * np.sin(pitch/2) * np.cos(yaw/2)
+        qw = np.cos(roll/2) * np.cos(pitch/2) * np.cos(yaw/2) + np.sin(roll/2) * np.sin(pitch/2) * np.sin(yaw/2)
+        return qz, qy, qx, qw
+    
+    def get_arrow_marker(self, euler_heading_angle, arrow_rgb_color, arrow_len=0.4, id=0, frame_id="base_link"):
+
+        marker = Marker()
+        marker.header.frame_id = frame_id  
+        marker.header.stamp = self.get_clock().now().to_msg()
+        marker.id = 0
+        marker.type = Marker.ARROW
+        marker.action = Marker.ADD
+
+        # Set the pose of the arrow
+        marker.pose.position = Point()  # Set the position of the arrow
+        marker.pose.position.x = 0.0
+        marker.pose.position.y = 0.0
+        marker.pose.position.z = 0.25
+
+        marker.pose.orientation = Quaternion()  # Set the orientation of the arrow
+        x, y, z = euler_heading_angle
+        qx, qy, qz, qw  = self.convert_euler_degrees_to_quaternion(x, y, z)
+        marker.pose.orientation.x = qx
+        marker.pose.orientation.y = qy
+        marker.pose.orientation.z = qz
+        marker.pose.orientation.w = qw
+
+        # Set the scale of the arrow
+        marker.scale = Vector3()  # Set the scale of the arrow (length, diameter, diameter)
+        marker.scale.x = arrow_len
+        marker.scale.y = 0.03
+        marker.scale.z = 0.03
+
+        # Set the color of the arrow (RGBA)
+        marker.color.r = arrow_rgb_color[0]
+        marker.color.g = arrow_rgb_color[1]
+        marker.color.b = arrow_rgb_color[2]
+        marker.color.a = 1.0
+
+        # Set the lifetime of the arrow marker
+        marker.lifetime.sec = 1
+        return marker
+
+    def publish_arrow_marker(self):
+        
+        path_deviation_angle = self.detector.path_deviation_angle
+        robot_heading_arrow_marker = self.get_arrow_marker((0, 0, 90), (1.0, 0.0, 0.0), arrow_len=0.4, id=0) 
+        path_heading_arrow_marker = self.get_arrow_marker((0, 0, 90+path_deviation_angle), (0.0, 1.0, 0.0), arrow_len=0.8, id=1) 
+        self.robot_heading_arrow_pub.publish(robot_heading_arrow_marker)
+        self.path_heading_arrow_pub.publish(path_heading_arrow_marker)         
 
 def plot_row_pointcloud(file):    
     """
