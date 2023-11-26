@@ -74,7 +74,7 @@ ros2 topic echo /cmd_vel
 
 3. To run test script
 ```
-python -m unittest test_path_orientation_detector.py 
+python -m unittest -b test_path_orientation_detector.py
 ```
 
 ## How does it work ?
