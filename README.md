@@ -56,6 +56,7 @@ cd ros2_ws/
 colcon build --symlink-install
 source install/setup.bash
 ros2 launch path_orientation_detector row_nav_node.launch.py input_pcl_file:='<point_cloud_file_name>'
+ros2 topic echo /cmd_vel
 ```
 - Note: If the Rviz config does not load, manually load it from ros2_ws/src/path_orientation_detector/config/rviz_config.rviz
 
@@ -78,9 +79,9 @@ python -m unittest test_path_orientation_detector.py
 4. Project the point cloud to 2D space thereby getting a top view
 5. Apply PCA on both left and right wall 2D point to get the direction of orientation.
 
-<img src="https://github.com/vaishanth-rmrj/neupeak-take-home-challenge/blob/main/git_extras/matplotlib_path_dev_viz.png" alt="Image Alt Text" width="200" height="50" />
+<img src="https://github.com/vaishanth-rmrj/neupeak-take-home-challenge/blob/main/git_extras/matplotlib_path_dev_viz.png" alt="Image Alt Text" width="300" height="300" />
 
 7. Average the direction angles to get the path deviation angle.
 8. Compute the angular correction rate using this angle.
 
-<img src="https://github.com/vaishanth-rmrj/neupeak-take-home-challenge/blob/main/git_extras/program_output.png" alt="Image Alt Text" width="600" height="200" />
+<img src="https://github.com/vaishanth-rmrj/neupeak-take-home-challenge/blob/main/git_extras/program_output.png" alt="Image Alt Text" width="400" height="200" />
