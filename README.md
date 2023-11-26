@@ -40,6 +40,11 @@ end_of_row: Boolean parameter that is True if end of row is detected
 1. Install ROS2 Humble
 [ROS2 Humble Install docs](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html)
 
+2. Clone the repository
+```
+git clone https://github.com/vaishanth-rmrj/neupeak-take-home-challenge.git
+```
+
 3. Install requirements.txt
 ```
 pip install -r requirements.txt
