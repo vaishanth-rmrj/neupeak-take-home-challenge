@@ -3,15 +3,13 @@ import matplotlib.pyplot as plt
 import open3d as o3d
 from sklearn.cluster import KMeans
 
-DEBUG = True
-
 class PathOrientationDetector:
     def __init__(self, 
                  distance_threshold=0.01, 
                  height_threshold=-0.1,
                  is_pcl_downsample=False,  
                  voxel_size=0.02,
-                 show_viz=True) -> None:
+                 show_viz=True):
         
         self.pcl_data = np.ndarray([])
         self.l_wall_pcl, self.r_wall_pcl = np.ndarray([]), np.ndarray([])
@@ -28,7 +26,7 @@ class PathOrientationDetector:
         self.is_path_ending = False
         self.path_deviation_angle = 0  
 
-    def set_pcl_from_array(self, pcl_array) -> None:
+    def set_pcl_from_array(self, pcl_array):
         """
         set pcl data from input file array
         Args:
@@ -207,7 +205,11 @@ class PathOrientationDetector:
                 plt.legend()
                 plt.show()
             
-            self.path_deviation_angle = (l_heading_angle + r_heading_angle)/2.0   
+            if l_heading_angle and r_heading_angle:
+                self.path_deviation_angle = (l_heading_angle + r_heading_angle)/2.0   
+            elif abs(l_heading_angle - r_heading_angle) > 20.0:
+                # check if diff in heading angle of walls
+                self.path_deviation_angle = None
             return self.path_deviation_angle
         
         except ValueError as ve:
@@ -300,10 +302,10 @@ class PathOrientationDetector:
             right_pcd = o3d.geometry.PointCloud()
             right_pcd.points = o3d.utility.Vector3dVector(self.r_wall_pcl)
 
-            # # Compute the axis-aligned bounding box
+            # compute the axis-aligned bounding box
             left_bbox = left_pcd.get_minimal_oriented_bounding_box()
             right_bbox = right_pcd.get_minimal_oriented_bounding_box()
-            # Extract bounding box corners
+            # extract bounding box corners
             left_bbox_corners = np.asarray(left_bbox.get_box_points())
             right_bbox_corners = np.asarray(right_bbox.get_box_points())
 

@@ -9,14 +9,13 @@ import pkg_resources
 package_name = 'path_orientation_detector'
 
 def generate_launch_description():
-    pkg_name = 'path_orientation_detector'
-    # rviz_config_dir = os.path.join(
-    #     get_package_share_directory(pkg_name), 
-    #     'config', 
-    #     'rviz_config.rviz'
-    # )
-    rviz_config_dir = pkg_resources.resource_filename(pkg_name, 'config/rviz_config.rviz')
 
+    # getting rviz config file path
+    rviz_config_file = pkg_resources.resource_filename(package_name, 'config/rviz_config.rviz')
+    first_occurrence_index = rviz_config_file.find(package_name)
+    second_occurrence_index = rviz_config_file.find(package_name, first_occurrence_index + 1)
+    rviz_config_file = rviz_config_file[:second_occurrence_index] + rviz_config_file[second_occurrence_index + len(package_name):]
+    
     return LaunchDescription([                              
         DeclareLaunchArgument('input_pcl_file', default_value='4.npz',
                               description='input point cloud file to load'),        
@@ -35,6 +34,6 @@ def generate_launch_description():
             executable='rviz2',
             name='rviz2',
             output='screen',
-            arguments=['-d', rviz_config_dir]
+            arguments=['-d', rviz_config_file]
         )
     ])
