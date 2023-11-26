@@ -10,7 +10,8 @@ class PathOrientationDetector:
                  distance_threshold=0.01, 
                  height_threshold=-0.1,
                  is_pcl_downsample=False,  
-                 voxel_size=0.02) -> None:
+                 voxel_size=0.02,
+                 show_viz=True) -> None:
         
         self.pcl_data = np.ndarray([])
         self.l_wall_pcl, self.r_wall_pcl = np.ndarray([]), np.ndarray([])
@@ -21,6 +22,7 @@ class PathOrientationDetector:
         self.height_threshold = height_threshold
         self.voxel_size = voxel_size
         self.is_pcl_downsample = is_pcl_downsample
+        self.show_viz = show_viz
 
         # variables
         self.is_path_ending = False
@@ -59,7 +61,7 @@ class PathOrientationDetector:
                                                                                         self.height_threshold) 
 
        
-    def pcl_segmentation_open3d(self, pcl_data, distance_threshold=0.01, height_threshold=-0.1, show_vis=True):        
+    def pcl_segmentation_open3d(self, pcl_data, distance_threshold=0.01, height_threshold=-0.1):        
         """
         extract wall and ground segments from pcl
         Args:
@@ -91,7 +93,7 @@ class PathOrientationDetector:
                                                 num_iterations=1000)
         
         # plane model coefficients, for debugging
-        if show_vis:
+        if self.show_viz:
             [a, b, c, d] = plane_model
             print(f"Plane equation: {a:.2f}x + {b:.2f}y + {c:.2f}z + {d:.2f} = 0")
 
@@ -100,7 +102,7 @@ class PathOrientationDetector:
         outlier_cloud = pcd.select_by_index(inliers, invert=True)
 
         # visualize pcl, for debugging
-        if show_vis:
+        if self.show_viz:
             o3d.visualization.draw_geometries([inlier_cloud, outlier_cloud])
 
         # convert pcl to np array
@@ -187,7 +189,7 @@ class PathOrientationDetector:
             l_heading_angle = 90.0 - (self.get_heading_angle_from_pca_dir(l_principal_dir) * -1)
             r_heading_angle = 90.0 - (self.get_heading_angle_from_pca_dir(r_principal_dir) * -1)
 
-            if show_visualization:
+            if self.show_viz:
                 plt.scatter(left_data_pts[:, 0], left_data_pts[:, 1])
                 plt.quiver(np.mean(left_data_pts[:, 0]), np.mean(left_data_pts[:, 1]), 
                         -l_principal_dir[0], -l_principal_dir[1], 
