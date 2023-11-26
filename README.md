@@ -55,6 +55,7 @@ pip install -r requirements.txt
 ```
 python row_nav.py '<input_point_cloud_file>' 
 ```
+- <input_point_cloud_file> == '1.npz'; '2.npz'; '3.npz'; '4.npz'
 2. With ROS
 ```
 cd ros2_ws/
@@ -63,6 +64,7 @@ source install/setup.bash
 ros2 launch path_orientation_detector row_nav_node.launch.py input_pcl_file:='<point_cloud_file_name>'
 ros2 topic echo /cmd_vel
 ```
+- <point_cloud_file_name> == '1.npz'; '2.npz'; '3.npz'; '4.npz'
 - Note: If the Rviz config does not load, manually load it from ros2_ws/src/path_orientation_detector/config/rviz_config.rviz
 
 <img src="https://github.com/vaishanth-rmrj/neupeak-take-home-challenge/blob/main/git_extras/rviz_viz.png" alt="Image Alt Text" width="800" height="600" />
