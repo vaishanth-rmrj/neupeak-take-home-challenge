@@ -38,9 +38,11 @@ end_of_row: Boolean parameter that is True if end of row is detected
 
 ## Installation:
 1. Install ROS2 Humble
-2. Install requirements.txt
+[ROS2 Humble Install docs](https://docs.ros.org/en/humble/Installation/Ubuntu-Install-Debians.html)
+
+3. Install requirements.txt
 ```
-pip install requirements.txt
+pip install -r requirements.txt
 ```
 
 ## Instructions to run
@@ -55,6 +57,13 @@ colcon build --symlink-install
 source install/setup.bash
 ros2 launch path_orientation_detector row_nav_node.launch.py input_pcl_file:='<point_cloud_file_name>'
 ```
+- Note: If the Rviz config does not load, manually load it from ros2_ws/src/path_orientation_detector/config/rviz_config.rviz
+
+<img src="https://github.com/vaishanth-rmrj/neupeak-take-home-challenge/blob/main/git_extras/rviz_viz.png" alt="Image Alt Text" width="800" height="600" />
+
+- Red arrow-> Robot direction
+- Green arrow -> Path deviation
+
 3. To run test script
 ```
 python -m unittest test_path_orientation_detector.py 
@@ -62,8 +71,16 @@ python -m unittest test_path_orientation_detector.py
 
 ## How does it work ?
 1. Downsample point cloud for better forformance (<35ms)
-2. Segment the point cloud to left, right walls and ground
-3. Project the point cloud to 2D space thereby getting a top view
-4. Apply PCA on both left and right wall 2D point to get the direction of orientation.
-5. Average the direction angles to get the path deviation angle.
-6. Compute the angular correction rate using this angle.
+
+<img src="https://github.com/vaishanth-rmrj/neupeak-take-home-challenge/blob/main/git_extras/open3d_pcl_viz.png" alt="Image Alt Text" width="200" height="200" />
+
+3. Segment the point cloud to left, right walls and ground
+4. Project the point cloud to 2D space thereby getting a top view
+5. Apply PCA on both left and right wall 2D point to get the direction of orientation.
+
+<img src="https://github.com/vaishanth-rmrj/neupeak-take-home-challenge/blob/main/git_extras/matplotlib_path_dev_viz.png" alt="Image Alt Text" width="200" height="50" />
+
+7. Average the direction angles to get the path deviation angle.
+8. Compute the angular correction rate using this angle.
+
+<img src="https://github.com/vaishanth-rmrj/neupeak-take-home-challenge/blob/main/git_extras/program_output.png" alt="Image Alt Text" width="600" height="200" />
