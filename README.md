@@ -59,7 +59,7 @@ python row_nav.py '<input_point_cloud_file>'
 2. With ROS
 ```
 cd ros2_ws/
-colcon build --symlink-install
+colcon build --symlink-install #ignore the warnings
 source install/setup.bash
 ros2 launch path_orientation_detector row_nav_node.launch.py input_pcl_file:='<point_cloud_file_name>'
 ros2 topic echo /cmd_vel
