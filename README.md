@@ -70,7 +70,7 @@ python -m unittest test_path_orientation_detector.py
 ```
 
 ## How does it work ?
-1. Downsample point cloud for better forformance (<35ms)
+1. Downsample point cloud for better forformance (<25ms for initial pcl loading)
 
 <img src="https://github.com/vaishanth-rmrj/neupeak-take-home-challenge/blob/main/git_extras/open3d_pcl_viz.png" alt="Image Alt Text" width="200" height="200" />
 
